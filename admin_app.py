@@ -1,0 +1,257 @@
+# admin_app.py
+# Painel de Análise de Ativos com controle de acesso, estilização e exportação
+
+import streamlit as st
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+from pivo import calculate_pivot_points
+from streamlit_autorefresh import st_autorefresh
+import numpy as np
+from pandas.tseries.offsets import Week
+import io
+import json
+import plotly.graph_objects as go
+
+st.set_page_config(layout="wide", page_title="Painel de Análise de Ativos")
+
+def style_weekly_gains(df):
+    styler_df = pd.DataFrame('', index=df.index, columns=df.columns)
+    date_cols = sorted([col for col in df.columns if isinstance(col, str) and '/' in str(col)],
+                       key=lambda d: datetime.strptime(d, '%d/%m/%Y'))
+    if not date_cols:
+        return styler_df
+    for idx in df.index:
+        for i in range(1, len(date_cols)):
+            prev_col = date_cols[i-1]
+            current_col = date_cols[i]
+            prev_val = df.loc[idx, prev_col]
+            current_val = df.loc[idx, current_col]
+            if pd.notna(current_val) and pd.notna(prev_val):
+                if current_val > prev_val:
+                    styler_df.loc[idx, current_col] = 'color: #2E7D32;'
+                elif current_val < prev_val:
+                    styler_df.loc[idx, current_col] = 'color: #C62828;'
+    return styler_df
+
+@st.cache_data(ttl=60)
+def buscar_e_calcular_tudo(tickers_list):
+    if not tickers_list:
+        return pd.DataFrame()
+
+    tickers_sa = [f"{t}.SA" if '.' not in t else t for t in tickers_list]
+    start_date = "2024-05-01"
+    end_date = datetime.now()
+
+    with st.spinner(f"A buscar dados de mercado para {len(tickers_list)} tickers..."):
+        hist_data = yf.download(tickers_sa, start=start_date, end=end_date, progress=False)
+        if hist_data.empty:
+            st.error("Não foi possível obter dados históricos para o período especificado.")
+            return pd.DataFrame()
+
+    results = []
+    for ticker in tickers_list:
+        try:
+            ticker_sa = f"{ticker}.SA" if '.' not in ticker else ticker
+            ticker_hist = hist_data.loc[:, (slice(None), ticker_sa)]
+            ticker_hist.columns = ticker_hist.columns.droplevel(1)
+            ticker_hist.dropna(how='all', inplace=True)
+
+            if ticker_hist.empty or len(ticker_hist) < 2:
+                continue
+
+            latest_close = ticker_hist['Close'].iloc[-1]
+            previous_close = ticker_hist['Close'].iloc[-2]
+            var_diaria = ((latest_close / previous_close) - 1) * 100
+
+            pivot_points = calculate_pivot_points(ticker_hist)
+            suporte_imediato = pd.NA
+            resistencia_imediata = pd.NA
+            amplitude_pct = pd.NA
+            k2 = k3 = k5 = k9 = k17 = k33 = k64 = pd.NA
+            kp2 = kp3 = kp5 = kp9 = kp17 = kp33 = kp64 = pd.NA
+            if pivot_points:
+                suportes = [pivot_points.get(k) for k in ['P', 'S1', 'S2', 'S3'] if pivot_points.get(k) is not None and pivot_points[k] < latest_close]
+                if suportes:
+                    suporte_imediato = max(suportes)
+                resistencias = [pivot_points.get(k) for k in ['P', 'R1', 'R2', 'R3'] if pivot_points.get(k) is not None and pivot_points[k] > latest_close]
+                if resistencias:
+                    resistencia_imediata = min(resistencias)
+                if pd.notna(suporte_imediato) and pd.notna(resistencia_imediata) and suporte_imediato > 0:
+                    amplitude_pct = ((resistencia_imediata / suporte_imediato) - 1) * 100
+                    k2 = amplitude_pct / -2
+                    k3 = amplitude_pct / -3
+                    k5 = amplitude_pct / -5
+                    k9 = amplitude_pct / -9
+                    k17 = amplitude_pct / -17
+                    k33 = amplitude_pct / -33
+                    k64 = amplitude_pct / -64
+                    kp2 = amplitude_pct / 2
+                    kp3 = amplitude_pct / 3
+                    kp5 = amplitude_pct / 5
+                    kp9 = amplitude_pct / 9
+                    kp17 = amplitude_pct / 17
+                    kp33 = amplitude_pct / 33
+                    kp64 = amplitude_pct / 64
+
+            weekly_closes = ticker_hist['Close'].resample('W-FRI').last().dropna()
+            friday_prices = {date.strftime('%d/%m/%Y'): price for date, price in weekly_closes.items()}
+
+            try:
+                if len(weekly_closes) >= 4:
+                    last_4 = weekly_closes[-4:]
+                    datas_x = [date.timestamp() for date in last_4.index]
+                    valores_y = list(last_4.values)
+                    coef = np.polyfit(datas_x, valores_y, deg=1)
+                    proxima_sexta = (datetime.now() + Week(weekday=4)).replace(hour=0, minute=0, second=0, microsecond=0)
+                    x_prev = proxima_sexta.timestamp()
+                    previsao = np.polyval(coef, x_prev)
+                    std_dev = np.std(valores_y)
+                    previsao_menos = previsao - std_dev
+                    previsao_mais = previsao + std_dev
+                else:
+                    previsao = previsao_menos = previsao_mais = pd.NA
+            except:
+                previsao = previsao_menos = previsao_mais = pd.NA
+
+            todos_ks = [k2, k3, k5, k9, k17, k33, k64, kp2, kp3, kp5, kp9, kp17, kp33, kp64]
+            k_suporte = sorted([k for k in todos_ks if pd.notna(k) and k < var_diaria], reverse=True)[0] if any(pd.notna(k) and k < var_diaria for k in todos_ks) else pd.NA
+            k_resistencia = sorted([k for k in todos_ks if pd.notna(k) and k > var_diaria])[0] if any(pd.notna(k) and k > var_diaria for k in todos_ks) else pd.NA
+
+            ticker_data = {
+                'Ticker': ticker,
+                'Cotação Atual (R$)': latest_close,
+                'Var (%) Diária': var_diaria,
+                **friday_prices,
+                **pivot_points,
+                'Suporte Imediato': suporte_imediato,
+                'Resistência Imediata': resistencia_imediata,
+                'Amplitude (%)': amplitude_pct,
+                'K(-2)': k2, 'K(-3)': k3, 'K(-5)': k5, 'K(-9)': k9, 'K(-17)': k17, 'K(-33)': k33, 'K(-64)': k64,
+                'K(+2)': kp2, 'K(+3)': kp3, 'K(+5)': kp5, 'K(+9)': kp9, 'K(+17)': kp17, 'K(+33)': kp33, 'K(+64)': kp64,
+                'K Suporte': k_suporte,
+                'K Resistência': k_resistencia,
+                'Spread (%)': (k_resistencia - k_suporte) if pd.notna(k_resistencia) and pd.notna(k_suporte) else pd.NA,
+                'Previsão (-)': previsao_menos,
+                'Previsão': previsao,
+                'Previsão (+)': previsao_mais
+            }
+            results.append(ticker_data)
+        except (KeyError, IndexError):
+            continue
+
+    st.success("Busca e análise concluídas!")
+    df_final = pd.DataFrame(results)
+    if df_final.empty:
+        st.warning("Não foram encontrados dados para nenhum dos tickers solicitados.")
+    return df_final
+
+# Upload e processamento do Excel
+
+if 'analysis_df' not in st.session_state:
+    st.session_state.analysis_df = pd.DataFrame()
+
+uploaded_file = st.sidebar.file_uploader("Carregue o seu ficheiro Excel", type=["xlsx", "xls"], help="O ficheiro deve conter uma coluna chamada 'Ticker' na aba 'Streamlit'.")
+
+if uploaded_file:
+    try:
+        df_tickers = pd.read_excel(uploaded_file, sheet_name="Streamlit")
+        if 'Ticker' in df_tickers.columns:
+            tickers = df_tickers['Ticker'].dropna().unique().tolist()
+            st.sidebar.write("---")
+            st.sidebar.header("2. Processar Dados")
+            auto_update = st.sidebar.toggle("Ligar atualização automática (1 min)")
+            if auto_update:
+                st_autorefresh(interval=60 * 1000, key="auto_refresher")
+                st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
+            elif st.sidebar.button("📊 Analisar Ativos Manualmente", type="primary"):
+                st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
+        else:
+            st.error("O ficheiro carregado não contém a coluna 'Ticker'.")
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao ler o ficheiro Excel: {e}")
+
+if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
+    st.write("---")
+    st.write("### Análise de Ativos")
+
+    # Rankings
+    if not st.session_state.analysis_df.empty:
+        st.subheader("📈 Rankings")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Top 5 Variações Diárias**")
+            top_var = st.session_state.analysis_df[['Ticker', 'Var (%) Diária']].sort_values(by='Var (%) Diária', ascending=False).head(5)
+            st.dataframe(top_var, use_container_width=True)
+
+        with col2:
+            st.markdown("**Top 5 Amplitudes**")
+            if 'Amplitude (%)' in st.session_state.analysis_df.columns:
+                top_amp = st.session_state.analysis_df[['Ticker', 'Amplitude (%)']].sort_values(by='Amplitude (%)', ascending=False).head(5)
+                st.dataframe(top_amp, use_container_width=True)
+
+        k_min = st.slider("K Suporte mínimo (%)", min_value=0, max_value=100, value=10)
+        spread_min = st.slider("Spread mínimo (%)", min_value=0, max_value=100, value=1)
+        st.markdown(f"**🔍 Sinais de oportunidade (K Suporte > {k_min}% ou Spread > {spread_min}%)**")
+        destaque_df = st.session_state.analysis_df[(st.session_state.analysis_df['K Suporte'] > k_min) | (st.session_state.analysis_df['Spread (%)'] > spread_min)]
+        if not destaque_df.empty:
+            st.dataframe(destaque_df[['Ticker', 'K Suporte', 'Spread (%)']], use_container_width=True)
+        else:
+            st.info("Nenhum ativo com destaque nos critérios atuais.")
+
+    perfil = st.radio("Tipo de acesso:", ['Usuário', 'Admin'], horizontal=True)
+    all_tickers = st.session_state.analysis_df['Ticker'].unique()
+    selected_tickers = st.multiselect("Filtrar por Ativo:", options=all_tickers, default=[], placeholder="Selecione um ou mais ativos para visualizar")
+    df_to_display = st.session_state.analysis_df[st.session_state.analysis_df['Ticker'].isin(selected_tickers)] if selected_tickers else st.session_state.analysis_df
+
+    if perfil == 'Admin':
+        colunas_usuario = st.multiselect("Selecionar colunas visíveis para o Usuário:", options=df_to_display.columns.tolist(), default=st.session_state.get('colunas_usuario', ['Ticker', 'Cotação Atual (R$)', 'Var (%) Diária', 'Previsão']))
+        st.session_state.colunas_usuario = colunas_usuario
+
+        with open("config_colunas_usuario.json", "w") as f:
+            json.dump(colunas_usuario, f)
+
+        if st.button("🔄 Resetar colunas do Usuário para padrão"):
+            st.session_state.colunas_usuario = ['Ticker', 'Cotação Atual (R$)', 'Var (%) Diária', 'Previsão']
+    else:
+        try:
+            with open("config_colunas_usuario.json") as f:
+                colunas_usuario = json.load(f)
+        except:
+            colunas_usuario = ['Ticker', 'Cotação Atual (R$)', 'Var (%) Diária', 'Previsão']
+
+        df_to_display = df_to_display[[col for col in colunas_usuario if col in df_to_display.columns]]
+
+    try:
+        styled_df = df_to_display.style.format({
+            'Previsão (-)': 'R$ {:,.2f}', 'Previsão (+)': 'R$ {:,.2f}',
+            'Var (%) Diária': '{:,.2f}%','Amplitude (%)': '{:,.2f}%','Spread (%)': '{:,.2f}%','Previsão': 'R$ {:,.2f}','Cotação Atual (R$)': 'R$ {:,.2f}'
+        }, na_rep='-').background_gradient(subset=['Var (%) Diária'], cmap='RdYlGn')
+
+        st.dataframe(styled_df, use_container_width=True)
+
+        # Gráfico de tendência
+        if perfil != 'Admin' and selected_tickers:
+            st.subheader("📊 Gráfico de Tendência")
+            for ticker in selected_tickers:
+                try:
+                    hist = yf.download(f"{ticker}.SA", period="6mo", interval="1wk")
+                    hist = hist[['Close', 'Open', 'High', 'Low']].dropna()
+                    fig = go.Figure(data=[go.Candlestick(x=hist.index,
+                                         open=hist['Open'],
+                                         high=hist['High'],
+                                         low=hist['Low'],
+                                         close=hist['Close'])])
+                    fig.update_layout(title=f"Candlestick de {ticker}", xaxis_title="Data", yaxis_title="Preço (R$)", height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+                except:
+                    st.warning(f"Não foi possível gerar gráfico para {ticker}")
+
+        csv = df_to_display.to_csv(index=False).encode('utf-8')
+        st.download_button("📅 Baixar dados filtrados", data=csv, file_name="dados_ativos.csv", mime="text/csv")
+
+    except Exception as e:
+        st.error(f"Erro ao exibir dados: {e}")
+        st.write(df_to_display)
+else:
+    st.info("Aguardando carregamento dos dados.")
