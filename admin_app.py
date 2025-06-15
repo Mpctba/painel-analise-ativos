@@ -143,30 +143,31 @@ def buscar_e_calcular_tudo(tickers_list):
         st.warning("Não foram encontrados dados para nenhum dos tickers solicitados.")
     return df_final
 
-# Upload e processamento do Excel
+# Carregamento automático da planilha Excel
+EXCEL_PATH = "BOV2025_Analise_Completa_B.xlsx"
 
 if 'analysis_df' not in st.session_state:
     st.session_state.analysis_df = pd.DataFrame()
 
-uploaded_file = st.sidebar.file_uploader("Carregue o seu ficheiro Excel", type=["xlsx", "xls"], help="O ficheiro deve conter uma coluna chamada 'Ticker' na aba 'Streamlit'.")
+try:
+    df_tickers = pd.read_excel(EXCEL_PATH, sheet_name="Streamlit")
+    if 'Ticker' in df_tickers.columns:
+        tickers = df_tickers['Ticker'].dropna().unique().tolist()
 
-if uploaded_file:
-    try:
-        df_tickers = pd.read_excel(uploaded_file, sheet_name="Streamlit")
-        if 'Ticker' in df_tickers.columns:
-            tickers = df_tickers['Ticker'].dropna().unique().tolist()
-            st.sidebar.write("---")
-            st.sidebar.header("2. Processar Dados")
-            auto_update = st.sidebar.toggle("Ligar atualização automática (1 min)")
-            if auto_update:
-                st_autorefresh(interval=60 * 1000, key="auto_refresher")
-                st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
-            elif st.sidebar.button("📊 Analisar Ativos Manualmente", type="primary"):
-                st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
-        else:
-            st.error("O ficheiro carregado não contém a coluna 'Ticker'.")
-    except Exception as e:
-        st.error(f"Ocorreu um erro ao ler o ficheiro Excel: {e}")
+        st.sidebar.header("2. Processar Dados")
+        st.sidebar.success("📄 Planilha carregada automaticamente com sucesso.")
+
+        auto_update = st.sidebar.toggle("🔄 Ligar atualização automática (1 min)")
+
+        if auto_update:
+            st_autorefresh(interval=60 * 1000, key="auto_refresher")
+            st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
+        elif st.sidebar.button("📈 Analisar Ativos Manualmente", type="primary"):
+            st.session_state.analysis_df = buscar_e_calcular_tudo(tickers)
+    else:
+        st.sidebar.error("❌ A planilha não contém a coluna 'Ticker'.")
+except Exception as e:
+    st.sidebar.error(f"⚠️ Erro ao carregar a planilha automática: {e}")
 
 if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
     st.write("---")
@@ -187,3 +188,4 @@ if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
         st.write(st.session_state.analysis_df)
 else:
     st.info("Aguardando carregamento dos dados.")
+
