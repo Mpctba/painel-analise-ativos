@@ -12,6 +12,22 @@ from pandas.tseries.offsets import Week
 
 st.set_page_config(layout="wide", page_title="Painel de Análise de Ativos")
 
+EXCEL_PATH = "BOV2025_Analise_Completa_B.xlsx"
+
+@st.cache_data(ttl=60)
+def buscar_variacoes_ibov_ouro_dolar_selic_vix():
+    try:
+        ibov = yf.download("^BVSP", period="2d")['Close']
+        ouro = yf.download("GC=F", period="2d")['Close']
+        dolar = yf.download("USDBRL=X", period="2d")['Close']
+        var_ibov = float(((ibov.iloc[-1] / ibov.iloc[-2]) - 1) * 100)
+        var_vix = float(((yf.download("^VIX", period="2d")['Close'].iloc[-1] / yf.download("^VIX", period="2d")['Close'].iloc[-2]) - 1) * 100)
+        var_ouro = float(((ouro.iloc[-1] / ouro.iloc[-2]) - 1) * 100)
+        var_dolar = float(((dolar.iloc[-1] / dolar.iloc[-2]) - 1) * 100)
+        return var_ibov, var_ouro, var_dolar, var_vix
+    except:
+        return None, None
+
 def style_weekly_gains(df):
     styler_df = pd.DataFrame('', index=df.index, columns=df.columns)
     date_cols = sorted([col for col in df.columns if isinstance(col, str) and '/' in str(col)],
@@ -143,19 +159,30 @@ def buscar_e_calcular_tudo(tickers_list):
         st.warning("Não foram encontrados dados para nenhum dos tickers solicitados.")
     return df_final
 
-# Carregamento automático da planilha Excel
-EXCEL_PATH = "BOV2025_Analise_Completa_B.xlsx"
-
 if 'analysis_df' not in st.session_state:
     st.session_state.analysis_df = pd.DataFrame()
+
+var_ibov, var_ouro, var_dolar, var_vix = buscar_variacoes_ibov_ouro_dolar_selic_vix()
 
 try:
     df_tickers = pd.read_excel(EXCEL_PATH, sheet_name="Streamlit")
     if 'Ticker' in df_tickers.columns:
         tickers = df_tickers['Ticker'].dropna().unique().tolist()
 
-        st.sidebar.header("2. Processar Dados")
-        st.sidebar.success("📄 Planilha carregada automaticamente com sucesso.")
+        if var_ibov is not None and var_ouro is not None and var_dolar is not None and var_vix is not None:
+            ibov_color = 'green' if var_ibov >= 0 else 'red'
+            ouro_color = 'green' if var_ouro >= 0 else 'red'
+            dolar_color = 'green' if var_dolar >= 0 else 'red'
+            
+            vix_color = 'red' if var_vix >= 0 else 'green'
+            vix_label = '(Mercado pessimista)' if var_vix >= 0 else '(Mercado otimista)'
+            st.sidebar.markdown(f"""
+                <div style='font-size:18px; font-weight:bold;'>
+                    📊 IBOV: <span style='color:{ibov_color};'>{var_ibov:.2f}%</span> |
+                    Ouro: <span style='color:{ouro_color};'>{var_ouro:.2f}%</span> |
+                    Dólar: <span style='color:{dolar_color};'>{var_dolar:.2f}%</span> |
+                    VIX: <span style='color:{vix_color};'>{var_vix:.2f}% <span style='font-weight:normal; color:{vix_color};'>{vix_label}</span></span> 
+                </div>""", unsafe_allow_html=True)
 
         auto_update = st.sidebar.toggle("🔄 Ligar atualização automática (1 min)")
 
@@ -168,6 +195,7 @@ try:
         st.sidebar.error("❌ A planilha não contém a coluna 'Ticker'.")
 except Exception as e:
     st.sidebar.error(f"⚠️ Erro ao carregar a planilha automática: {e}")
+
 
 if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
     st.write("---")
@@ -188,4 +216,3 @@ if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
         st.write(st.session_state.analysis_df)
 else:
     st.info("Aguardando carregamento dos dados.")
-
