@@ -215,4 +215,4 @@ if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
         st.error(f"Erro ao exibir dados: {e}")
         st.write(st.session_state.analysis_df)
 else:
-    st.info("Aguardando carregamento dos dados.")   
+    st.info("Aguardando carregamento dos dados.")
