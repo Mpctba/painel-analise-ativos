@@ -1,0 +1,8 @@
+streamlit==1.35.0
+pandas==2.2.2
+numpy==1.26.4
+yfinance==0.2.36
+openpyxl==3.1.2
+unicodedata2==15.1.0
+pytz==2024.1
+
