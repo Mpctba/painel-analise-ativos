@@ -1,5 +1,3 @@
-# app.py
-
 import os
 import streamlit as st
 import pandas as pd
@@ -170,8 +168,7 @@ def main():
             cols.insert(i + 1, "Cotação atual")
             display_df = display_df[cols]
 
-        fmt = {col: "{:.2f}" for col in display_df.select_dtypes(include=[np.number]).columns}
-
+                fmt = {col: "{:.2f}" for col in display_df.select_dtypes(include=[np.number]).columns}
 
         display_df.columns = [str(c) for c in display_df.columns]
         date_cols_fmt = [c for c in display_df.columns if c[:4].isdigit() and "-" in c]
@@ -204,4 +201,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
