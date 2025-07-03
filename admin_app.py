@@ -1,14 +1,12 @@
+# app.py
+
 import os
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 import unicodedata
 import numpy as np
-import pytz
-from datetime import datetime, timedelta
-
-# Fuso horário correto
-TZ = pytz.timezone("America/Sao_Paulo")
+from datetime import date, timedelta, datetime as dt
 
 st.set_page_config(page_title="📈 Análise de Preços Semanais - BOV2025", layout="wide")
 st.title("📈 Análise de Preços Semanais - BOV2025")
@@ -128,7 +126,7 @@ def main():
         date_cols = [c for c in df.columns if c[:4].isdigit() and "-" in c]
         for c in date_cols: df[c] = pd.to_numeric(df[c],errors="coerce")
 
-        today = datetime.now(TZ).date()
+        today = date.today()
         wd = today.weekday()
         offset = (4 - wd) % 7
         offset = offset if offset != 0 else 7
@@ -138,11 +136,10 @@ def main():
         last_dates = []
         for col in last_cols:
             try:
-                d = datetime.fromisoformat(str(col))
+                d = dt.fromisoformat(str(col))
             except ValueError:
-                d = pd.to_datetime(col).to_pydatetime()
-            d = d.replace(tzinfo=None).date()
-            last_dates.append(d)
+                d = pd.to_datetime(col)
+            last_dates.append(d.date())
 
         def prever_alvo(row):
             ys = [row[c] for c in last_cols]
@@ -163,12 +160,10 @@ def main():
 
         cols = list(display_df.columns)
         if "Ticker_YF" in cols and "Cotação atual" in cols:
-            cols.remove("Cotação atual")
-            i = cols.index("Ticker_YF")
-            cols.insert(i + 1, "Cotação atual")
+            cols.remove("Cotação atual"); i = cols.index("Ticker_YF"); cols.insert(i+1,"Cotação atual")
             display_df = display_df[cols]
 
-                fmt = {col: "{:.2f}" for col in display_df.select_dtypes(include=[np.number]).columns}
+        fmt = {col: "{:.2f}" for col in display_df.select_dtypes(include=[np.number]).columns}
 
         display_df.columns = [str(c) for c in display_df.columns]
         date_cols_fmt = [c for c in display_df.columns if c[:4].isdigit() and "-" in c]
@@ -179,7 +174,7 @@ def main():
             vals = row[colunas_para_estilo].values
             styles = [''] * len(vals)
             for i in range(1, len(vals)):
-                ant = vals[i - 1]
+                ant = vals[i-1]
                 atual = vals[i]
                 if pd.notnull(ant) and pd.notnull(atual):
                     if atual > ant:
