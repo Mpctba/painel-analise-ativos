@@ -16,15 +16,15 @@ K (2)
 //Amplitude
 //Var (abaixo)
 //Var (acima)
-S3
-S2
-S1
-P
-R1
-R2
-R3
-Mínima sexta desde jun/24
-Máxima sexta desde jun/24
+//S3
+//S2
+//S1
+//P
+//R1
+//R2
+//R3
+//Mínima sexta desde jun/24
+//Máxima sexta desde jun/24
 //Fechamento mais recente
-Nível abaixo
-Nível acima
+//Nível abaixo
+//Nível acima
