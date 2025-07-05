@@ -44,24 +44,17 @@ def get_price_var_min_max_last(ticker_yf: str):
         if closes.empty:
             return [None]*5
 
-        close_today = closes.iloc[-1]
+        close_today = safe_round(closes.iloc[-1])
         close_yesterday = closes.iloc[-2] if len(closes) >= 2 else None
-        var_pct = ((close_today - close_yesterday) / close_yesterday * 100) if close_yesterday is not None else None
+        var_pct = safe_round((close_today - close_yesterday) / close_yesterday * 100) if close_yesterday is not None else None
 
         # Filtra sextas-feiras
         fridays = closes[closes.index.weekday == 4]
-        min_f = fridays.min() if not fridays.empty else None
-        max_f = fridays.max() if not fridays.empty else None
-        last_f = fridays.iloc[-1] if not fridays.empty else None
+        min_f = safe_round(fridays.min()) if not fridays.empty else None
+        max_f = safe_round(fridays.max()) if not fridays.empty else None
+        last_f = safe_round(fridays.iloc[-1]) if not fridays.empty else None
 
-        # Arredonda resultados
-        return [
-            safe_round(close_today),
-            safe_round(var_pct),
-            safe_round(min_f),
-            safe_round(max_f),
-            safe_round(last_f)
-        ]
+        return [close_today, var_pct, min_f, max_f, last_f]
     except Exception:
         return [None]*5
 
@@ -91,14 +84,21 @@ def main():
             st.warning("Coluna 'Ticker' não encontrada.")
             return
 
+        # Formata tickers para yfinance (.SA)
         df["Ticker_YF"] = df["Ticker"].astype(str).str.strip() + ".SA"
 
-        # Busca métricas
+        # Busca métricas de preço
         metrics = df["Ticker_YF"].apply(lambda t: pd.Series(get_price_var_min_max_last(t)))
         metrics.columns = [
             "Cotação atual", "Var", "Mínima sexta", "Máxima sexta", "Último fechamento sexta"
         ]
         df = pd.concat([df, metrics], axis=1)
+
+        # Filtro por Ticker com multiselect
+        options = df["Ticker"].unique().tolist()
+        selected = st.multiselect("Filtrar por Ticker:", options=options, default=options)
+        if selected:
+            df = df[df["Ticker"].isin(selected)]
 
         # SR: Suporte/Resistência
         def calc_sr(row):
@@ -112,7 +112,7 @@ def main():
 
         # Níveis próximos
         def proximos(row):
-            price = row["Cotação atual"]
+            price = row.get("Cotação atual")
             levels = [row[c] for c in ["S3","S2","S1","P","R1","R2","R3"] if pd.notnull(row[c])]
             if pd.isnull(price) or not levels:
                 return [None, None]
@@ -123,15 +123,14 @@ def main():
 
         # Delta e Amplitude
         def compute_delta(row):
-            p = row["Cotação atual"]
-            a, b = row["Nível abaixo"], row["Nível acima"]
+            p, a, b = row["Cotação atual"], row["Nível abaixo"], row["Nível acima"]
             if pd.isnull(p) or pd.isnull(a) or pd.isnull(b):
                 return None
             d1 = abs((p - a) / p) * 100
             d2 = abs((b - p) / p) * 100
             return safe_round(min(d1, d2))
         df["Delta"] = df.apply(compute_delta, axis=1)
-        
+
         def compute_amplitude(row):
             a, b = row["Nível abaixo"], row["Nível acima"]
             if pd.notnull(a) and pd.notnull(b) and a != 0:
@@ -139,7 +138,7 @@ def main():
             return None
         df["Amplitude"] = df.apply(compute_amplitude, axis=1)
 
-        # Exibição
+        # Exibição: remove colunas ocultas
         ocultar = [c for c in hidden_cols if c in df.columns]
         display_df = df.drop(columns=ocultar, errors="ignore")
 
