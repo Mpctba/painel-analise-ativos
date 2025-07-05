@@ -3,3 +3,4 @@ openpyxl~=3.1.0
 pandas~=1.5.0
 streamlit~=1.25.0
 yfinance~=0.2.0
+pytz
