@@ -27,8 +27,8 @@ def carregar_planilha(path: str, aba: str) -> pd.DataFrame:
 def get_price_var_min_max_last(ticker_yf: str):
     try:
         ticker_data = yf.Ticker(ticker_yf)
-        hist = ticker_data.history(period="5d")
-        if hist.empty or "Close" not in hist.columns:
+        hist = ticker_data.history(start="2024-06-01")
+        if hist.empty:
             return None, None, None, None, None
 
         recent = hist.tail(2)
@@ -112,6 +112,7 @@ def main():
         k_div = [-2,-3,-5,-9,-17,-33,-65,65,33,17,9,5,3,2]
         k_cols = [f"K ({k})" for k in k_div]
         df[k_cols] = df["Amplitude"].apply(lambda amp: pd.Series([round(amp/k, 2) if pd.notnull(amp) else None for k in k_div]))
+
         def encontrar_var_faixa(row):
             var = row.get("Var")
             arr = sorted([row.get(c) for c in k_cols if pd.notnull(row.get(c))])
@@ -123,8 +124,7 @@ def main():
         df["Spread (%)"] = df.apply(lambda r: round(r.get("Var (acima)")-r.get("Var (abaixo)"), 2) if pd.notnull(r.get("Var (abaixo)")) else None, axis=1)
 
         date_cols = [c for c in df.columns if c[:4].isdigit() and "-" in c]
-        for c in date_cols:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+        for c in date_cols: df[c] = pd.to_numeric(df[c],errors="coerce")
 
         today = date.today()
         wd = today.weekday()
@@ -153,17 +153,14 @@ def main():
 
         opt = df["Ticker"].unique().tolist()
         sel = st.multiselect("Filtrar por Ticker:", options=opt, default=[])
-        if sel:
-            df = df[df["Ticker"].isin(sel)]
+        if sel: df = df[df["Ticker"].isin(sel)]
 
         ocultar = [col for col in hidden_cols if col in df.columns] if hidden_cols else []
         display_df = df.drop(columns=ocultar, errors="ignore")
 
         cols = list(display_df.columns)
         if "Ticker_YF" in cols and "Cotação atual" in cols:
-            cols.remove("Cotação atual")
-            i = cols.index("Ticker_YF")
-            cols.insert(i + 1, "Cotação atual")
+            cols.remove("Cotação atual"); i = cols.index("Ticker_YF"); cols.insert(i+1,"Cotação atual")
             display_df = display_df[cols]
 
         fmt = {col: "{:.2f}" for col in display_df.select_dtypes(include=[np.number]).columns}
@@ -177,7 +174,7 @@ def main():
             vals = row[colunas_para_estilo].values
             styles = [''] * len(vals)
             for i in range(1, len(vals)):
-                ant = vals[i - 1]
+                ant = vals[i-1]
                 atual = vals[i]
                 if pd.notnull(ant) and pd.notnull(atual):
                     if atual > ant:
