@@ -16,5 +16,5 @@ COPY . .
 # Exponha a porta que o Render usará
 EXPOSE 8000
 
-# Comando de start: executa via shell para expandir $PORT corretamente
-CMD ["/bin/sh","-c","streamlit run app_admin.py --server.port $PORT --server.address 0.0.0.0"]
+# Comando para rodar o Streamlit (shell form expande $PORT automaticamente)
+CMD streamlit run app_admin.py --server.port $PORT --server.address 0.0.0.0
