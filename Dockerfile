@@ -1,20 +1,19 @@
-# Usa uma imagem Python leve
+# Use a lightweight Python base image
 FROM python:3.10-slim
 
-# Define o diretório de trabalho
+# Set working directory in the container
 WORKDIR /app
 
-# Copia apenas o requirements.txt para aproveitar o cache
+# Copy and install dependencies first for Docker cache efficiency
 COPY requirements.txt ./
-
-# Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante do código
+# Copy application code into the container
 COPY . .
 
-# Exponha a porta que o Render usará
+# Expose the port Streamlit will run on (convention)
 EXPOSE 8000
 
-# Comando para rodar o Streamlit (shell form expande $PORT automaticamente)
+# Start the Streamlit app using shell form to allow $PORT expansion
+env PORT=${PORT:-8000}
 CMD streamlit run app_admin.py --server.port $PORT --server.address 0.0.0.0
