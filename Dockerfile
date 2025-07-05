@@ -18,4 +18,4 @@ RUN rm -rf .streamlit
 EXPOSE 8000
 
 # Start the Streamlit app using shell form to allow $PORT expansion
-CMD ["/bin/sh", "-c", "streamlit run app_admin.py --server.port ${PORT:-8000} --server.address 0.0.0.0"]
+CMD ["/bin/sh", "-c", "streamlit run admin_app.py --server.port ${PORT:-8000} --server.address 0.0.0.0"]
