@@ -28,3 +28,13 @@ Máxima sexta desde jun/24
 Fechamento mais recente
 Nível abaixo
 Nível acima
+2025-06-07 00:00:00
+2025-06-14 00:00:00
+2025-06-21 00:00:00
+2025-06-28 00:00:00
+2025-07-05 00:00:00
+//2025-07-12 00:00:00
+//Cotação atual
+//Var
+//Alvo
+Delta
