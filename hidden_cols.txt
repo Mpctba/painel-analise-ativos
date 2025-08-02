@@ -1,6 +1,6 @@
 //Ticker
 Ticker_YF
-Var
+//Var
 //Spread (%)
 Fechamento mais recente
 //Nível
@@ -47,6 +47,6 @@ SMA_20_Dias
 EMA_20_Dias
 BB_Upper
 BB_Lower
-RSI_14_Dias
+//RSI_14_Dias
 Volume_Medio_20_Dias
 //Score
