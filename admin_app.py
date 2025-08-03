@@ -707,7 +707,7 @@ def calculate_attractiveness_score(row: pd.Series, weights: dict) -> float:
     spread_pct = row.get('Spread (%)')
     var_daily = row.get('Var')
     if pd.notnull(spread_pct) and spread_pct > 1.0 and \
-       pd.notnull(var_daily) and var_daily < 0:
+        pd.notnull(var_daily) and var_daily < 0:
         score += 1.0 * weights.get('spread_bonus', 1.0) # Adiciona 1.0 ponto de bônus
 
     # NOVO CRITÉRIO: Proximidade ao Alvo (se o alvo for de alta)
@@ -975,11 +975,11 @@ def visualize_price_data(hist_data: pd.DataFrame, ticker: str, sr_levels: dict, 
 
     # Candlestick chart
     fig.add_trace(go.Candlestick(x=hist_data.index,
-                                 open=hist_data['Open'],
-                                 high=hist_data['High'],
-                                 low=hist_data['Low'],
-                                 close=hist_data['Close'],
-                                 name='Preço'), row=1, col=1)
+                                open=hist_data['Open'],
+                                high=hist_data['High'],
+                                low=hist_data['Low'],
+                                close=hist_data['Close'],
+                                name='Preço'), row=1, col=1)
 
     # Moving Averages
     if 'SMA_20_Dias' in hist_data.columns and hist_data['SMA_20_Dias'].any():
@@ -1733,48 +1733,39 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
         st.info("Por favor, selecione exatamente um Ticker para gerar o gráfico interativo.")
 
 
-# --- Função display_indices_tab (MODIFICADA) ---
+# --- Função display_indices_tab (VERSÃO FINAL E CORRIGIDA) ---
 def display_indices_tab():
     """
-    Exibe a aba de índices com o preço e variação do Ibovespa, Ouro, Petróleo, Dólar e outros índices globais.
-    **Adicionada Dívida Pública (custo) do Brasil.**
+    Exibe a aba de índices com cotações e uma seção para comparação de performance.
     """
     st.header("📈 Cotações de Índices e Commodities Relevantes")
 
-    # Tickers do yfinance
-    # Ações/Mercados
-    ibov_ticker = "^BVSP"       # Ibovespa
-    sp500_ticker = "^GSPC"      # S&P 500
-    nasdaq_ticker = "^IXIC"     # Nasdaq Composite
-    dow_jones_ticker = "^DJI"   # Dow Jones Industrial Average
-    euro_stoxx_ticker = "^STOXX50E" # Euro Stoxx 50
-    nikkei_ticker = "^N225"     # Nikkei 225
+    # --- Seção 1: Tabela de Cotações (código original, sem alterações) ---
+    ibov_ticker = "^BVSP"
+    sp500_ticker = "^GSPC"
+    nasdaq_ticker = "^IXIC"
+    dow_jones_ticker = "^DJI"
+    euro_stoxx_ticker = "^STOXX50E"
+    nikkei_ticker = "^N225"
+    vix_ticker = "^VIX"
+    gold_ticker = "GC=F"
+    oil_ticker = "CL=F"
+    silver_ticker = "SI=F"
+    natural_gas_ticker = "NG=F"
+    copper_ticker = "HG=F"
+    coffee_ticker = "KC=F"
+    wheat_ticker = "ZW=F"
+    soybean_ticker = "ZS=F"
+    brl_usd_ticker = "BRL=X"
+    brazil_bond_yield_ticker = "BR10YT=X"
 
-    # Commodities
-    gold_ticker = "GC=F"       # Futuro do Ouro em USD
-    oil_ticker = "CL=F"        # Futuro do Petróleo WTI em USD
-    silver_ticker = "SI=F"     # Futuro da Prata em USD
-    natural_gas_ticker = "NG=F" # Futuro do Gás Natural em USD
-    copper_ticker = "HG=F"     # Futuro do Cobre em USD
-    coffee_ticker = "KC=F"     # Futuro do Café em USD
-    wheat_ticker = "ZW=F"      # Futuro do Trigo em USD
-    soybean_ticker = "ZS=F"    # Futuro da Soja em USD
-
-
-    # Câmbio
-    brl_usd_ticker = "BRL=X"    # Dólar Comercial (USD/BRL)
-
-    # NOVO: Dívida Pública (como proxy: rendimento do título de 10 anos do Brasil)
-    brazil_bond_yield_ticker = "BR10YT=X" # Rendimento do Título do Tesouro de 10 anos do Brasil
-
-    # Busca os dados para cada ticker
     ibov_price, ibov_var = get_index_data(ibov_ticker)
     sp500_price, sp500_var = get_index_data(sp500_ticker)
     nasdaq_price, nasdaq_var = get_index_data(nasdaq_ticker)
     dow_jones_price, dow_jones_var = get_index_data(dow_jones_ticker)
     euro_stoxx_price, euro_stoxx_var = get_index_data(euro_stoxx_ticker)
     nikkei_price, nikkei_var = get_index_data(nikkei_ticker)
-
+    vix_price, vix_var = get_index_data(vix_ticker)
     gold_price, gold_var = get_index_data(gold_ticker)
     oil_price, oil_var = get_index_data(oil_ticker)
     silver_price, silver_var = get_index_data(silver_ticker)
@@ -1783,61 +1774,37 @@ def display_indices_tab():
     coffee_price, coffee_var = get_index_data(coffee_ticker)
     wheat_price, wheat_var = get_index_data(wheat_ticker)
     soybean_price, soybean_var = get_index_data(soybean_ticker)
-
     brl_usd_price, brl_usd_var = get_index_data(brl_usd_ticker)
-
-    # NOVO: Busca dados da Dívida Pública (rendimento)
     brazil_bond_yield_price, brazil_bond_yield_var = get_index_data(brazil_bond_yield_ticker)
 
     data = {
         "Ativo/Índice": [
-            "Ibovespa (B3)",
-            "S&P 500 (EUA)",
-            "Nasdaq (EUA)",
-            "Dow Jones (EUA)",
-            "Euro Stoxx 50 (UE)",
-            "Nikkei 225 (Japão)",
-            "Ouro (USD)",
-            "Prata (USD)",
-            "Petróleo WTI (USD)",
-            "Gás Natural (USD)",
-            "Cobre (USD)",
-            "Café (USD)",
-            "Trigo (USD)",
-            "Soja (USD)",
-            "Dólar Comercial (USD/BRL)",
-            "Dívida Pública (Rendimento 10a - Brasil)" # NOVO ATIVO
+            "Ibovespa (B3)", "S&P 500 (EUA)", "Nasdaq (EUA)", "Dow Jones (EUA)",
+            "Euro Stoxx 50 (UE)", "Nikkei 225 (Japão)", "Índice de Volatilidade (VIX)",
+            "Ouro (USD)", "Prata (USD)", "Petróleo WTI (USD)", "Gás Natural (USD)",
+            "Cobre (USD)", "Café (USD)", "Trigo (USD)", "Soja (USD)",
+            "Dólar Comercial (USD/BRL)", "Dívida Pública (Rendimento 10a - Brasil)"
         ],
         "Cotação Atual": [
-            ibov_price, sp500_price, nasdaq_price, dow_jones_price, euro_stoxx_price, nikkei_price,
-            gold_price, silver_price, oil_price, natural_gas_price, copper_price, coffee_price,
-            wheat_price, soybean_price, brl_usd_price,
-            brazil_bond_yield_price # NOVO: Preço da Dívida Pública (Rendimento)
+            ibov_price, sp500_price, nasdaq_price, dow_jones_price, euro_stoxx_price,
+            nikkei_price, vix_price, gold_price, silver_price, oil_price, natural_gas_price,
+            copper_price, coffee_price, wheat_price, soybean_price, brl_usd_price,
+            brazil_bond_yield_price
         ],
         "Variação (%)": [
             ibov_var, sp500_var, nasdaq_var, dow_jones_var, euro_stoxx_var, nikkei_var,
-            gold_var, silver_var, oil_var, natural_gas_var, copper_var, coffee_var,
-            wheat_var, soybean_var, brl_usd_var,
-            brazil_bond_yield_var # NOVO: Variação da Dívida Pública (Rendimento)
+            vix_var, gold_var, silver_var, oil_var, natural_gas_var, copper_var,
+            coffee_var, wheat_var, soybean_var, brl_usd_var, brazil_bond_yield_var
         ]
     }
     df_indices = pd.DataFrame(data)
 
-    # Estilização para a variação (verde para alta, vermelho para baixa)
     def highlight_variation(val):
         if pd.notnull(val):
-            if val >= 0:
-                return 'color: green; font-weight: bold'
-            else:
-                return 'color: red; font-weight: bold'
+            return 'color: green; font-weight: bold' if val >= 0 else 'color: red; font-weight: bold'
         return ''
 
-    # Formatação dos números
-    fmt = {
-        "Cotação Atual": "{:.2f}",
-        "Variação (%)": "{:.2f}%"
-    }
-
+    fmt = {"Cotação Atual": "{:.2f}", "Variação (%)": "{:.2f}%"}
     styled_df_indices = df_indices.style.format(fmt).applymap(
         highlight_variation, subset=pd.IndexSlice[:, ['Variação (%)']]
     )
@@ -1847,6 +1814,89 @@ def display_indices_tab():
     else:
         st.info("Não foi possível carregar os dados de todos os índices. Por favor, tente novamente mais tarde.")
 
+    st.write("---")
+
+    # --- Seção 2: Comparativo de Performance (LÓGICA FINAL E CORRIGIDA) ---
+    st.subheader("Comparativo de Performance Semanal (Últimos 12 Meses)")
+
+    # CORREÇÃO: A lista agora inclui todos os ativos da tabela para seleção
+    indices_disponiveis = {
+        "Ibovespa (B3)": "^BVSP",
+        "S&P 500 (EUA)": "^GSPC",
+        "Nasdaq (EUA)": "^IXIC",
+        "Dow Jones (EUA)": "^DJI",
+        "Euro Stoxx 50 (UE)": "^STOXX50E",
+        "Nikkei 225 (Japão)": "^N225",
+        "Índice de Volatilidade (VIX)": "^VIX",
+        "Ouro (USD)": "GC=F",
+        "Prata (USD)": "SI=F",
+        "Petróleo WTI (USD)": "CL=F",
+        "Gás Natural (USD)": "NG=F",
+        "Cobre (USD)": "HG=F",
+        "Café (USD)": "KC=F",
+        "Trigo (USD)": "ZW=F",
+        "Soja (USD)": "ZS=F",
+        "Dólar Comercial (USD/BRL)": "BRL=X",
+        "Dívida Pública (Rendimento 10a - Brasil)": "BR10YT=X"
+    }
+
+    selecionados = st.multiselect(
+        "Selecione os ativos para comparar:",
+        options=list(indices_disponiveis.keys()),
+        default=["Ibovespa (B3)", "S&P 500 (EUA)", "Dólar Comercial (USD/BRL)"] # Default atualizado
+    )
+
+    if selecionados:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=365)
+        
+        closes_list = []
+        column_names = []
+
+        with st.spinner("Buscando dados históricos..."):
+            for nome_indice in selecionados:
+                ticker_yf = indices_disponiveis[nome_indice]
+                try:
+                    hist = yf.Ticker(ticker_yf).history(start=start_date, end=end_date, auto_adjust=True)
+                    if hist.empty:
+                        st.warning(f"Não foram encontrados dados históricos para '{nome_indice}'.")
+                        continue
+                    
+                    closes_list.append(hist['Close'])
+                    column_names.append(nome_indice)
+
+                except Exception as e:
+                    st.error(f"Erro ao buscar dados para '{nome_indice}': {e}")
+        
+        if closes_list:
+            all_closes = pd.concat(closes_list, axis=1)
+            all_closes.columns = column_names
+            
+            with st.spinner("Calculando performance..."):
+                weekly_closes = all_closes.resample('W-FRI').last()
+                weekly_closes.dropna(how='all', inplace=True)
+                performance_df = (weekly_closes / weekly_closes.bfill().iloc[0]) * 100
+
+            fig = go.Figure()
+            for indice in performance_df.columns:
+                fig.add_trace(go.Scatter(
+                    x=performance_df.index,
+                    y=performance_df[indice],
+                    mode='lines',
+                    name=indice,
+                    connectgaps=True 
+                ))
+
+            fig.update_layout(
+                title="Performance Normalizada (Base 100)",
+                yaxis_title="Performance (Primeiro dia = 100)",
+                xaxis_title="Data",
+                legend_title="Ativos",
+                hovermode="x unified"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Selecione um ou mais ativos para visualizar a comparação de performance.")
 
 # --- Função Principal da Aplicação Streamlit (MODIFICADA) ---
 
