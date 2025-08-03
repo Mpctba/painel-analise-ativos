@@ -7,3 +7,4 @@ statsmodels
 streamlit~=1.25.0
 yfinance~=0.2.0
 pytz
+lxml
