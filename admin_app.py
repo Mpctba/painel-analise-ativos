@@ -7,54 +7,56 @@
 #
 # 2. FUNÇÕES DE AQUISIÇÃO E CARREGAMENTO DE DADOS
 #    2.1. Carregamento de Dados Locais
-#       2.1.1. carregar_planilha
-#       2.1.2. load_default_tickers
+#        2.1.1. carregar_planilha
+#        2.1.2. load_default_tickers
 #    2.2. Aquisição de Dados Online (yfinance)
-#       2.2.1. get_price_var_min_max_last
-#       2.2.2. get_index_data
-#       2.2.3. get_next_ex_dividend_date
-#       2.2.4. get_last_ex_dividend_date
+#        2.2.1. get_price_var_min_max_last
+#        2.2.2. get_index_data
+#        2.2.3. get_next_ex_dividend_date
+#        2.2.4. get_last_ex_dividend_date
 #
 # 3. FUNÇÕES DE CÁLCULO E ANÁLISE DE INDICADORES
 #    3.1. Indicadores Baseados em Suporte e Resistência (SR)
-#       3.1.1. calcular_sr
-#       3.1.2. encontrar_valores_proximos
-#       3.1.3. calcular_distancia_percentual
-#       3.1.4. encontrar_var_faixa
-#       3.1.5. calculate_historical_spread
+#        3.1.1. calcular_sr
+#        3.1.2. encontrar_valores_proximos
+#        3.1.3. calcular_distancia_percentual
+#        3.1.4. encontrar_var_faixa
+#        3.1.5. calculate_historical_spread
 #    3.2. Indicadores de Previsão e Tendência
-#       3.2.1. prever_alvo
-#       3.2.2. calculate_consecutive_growth
+#        3.2.1. prever_alvo
+#        3.2.2. calculate_consecutive_growth
 #    3.3. Análise de Ciclos Temporais
-#       3.3.1. calculate_fft_period
-#       3.3.2. calculate_acf_period
-#       3.3.3. calculate_sin_fit_period
-#       3.3.4. get_dominant_cycle
-#       3.3.5. predict_target_from_cycle
+#        3.3.1. calculate_fft_period
+#        3.3.2. calculate_acf_period
+#        3.3.3. calculate_sin_fit_period
+#        3.3.4. get_dominant_cycle
+#        3.3.5. predict_target_from_cycle
 #    3.4. Indicadores Técnicos Adicionais
-#       3.4.1. calculate_additional_indicators
-#       3.4.2. get_max_price_last_12_months
-#       3.4.3. calculate_days_since_target_hit
+#        3.4.1. calculate_additional_indicators
+#        3.4.2. get_max_price_last_12_months
+#        3.4.3. calculate_days_since_target_hit
 #    3.5. Indicadores Relacionados a Dividendos
-#       3.5.1. calculate_dividend_yield
-#    3.6. Geração de Score e Insights
-#       3.6.1. calculate_attractiveness_score
-#       3.6.2. generate_insight
+#        3.5.1. calculate_dividend_yield
+#    3.6. Geração de Score e Indicadores
+#        3.6.1. calculate_attractiveness_score
+#        3.6.2. generate_insight
+#        3.6.3. analisar_spread
 #
 # 4. FUNÇÕES DE VISUALIZAÇÃO E ESTILIZAÇÃO
 #    4.1. Estilização de DataFrames
-#       4.1.1. highlight_colunas_comparadas
-#       4.1.2. highlight_insights
+#        4.1.1. highlight_colunas_comparadas
+#        4.1.2. highlight_insights
+#        4.1.3. highlight_analise_spread
 #    4.2. Gráficos Interativos
-#       4.2.1. visualize_price_data
+#        4.2.1. visualize_price_data
 #
 # 5. LÓGICA PRINCIPAL DA APLICAÇÃO STREAMLIT
 #    5.1. Processamento e Exibição por Tipo de Ativo
-#       5.1.1. process_and_display_data
+#        5.1.1. process_and_display_data
 #    5.2. Exibição da Aba de Índices
-#       5.2.1. display_indices_tab
+#        5.2.1. display_indices_tab
 #    5.3. Função Principal de Execução
-#       5.3.1. main
+#        5.3.1. main
 #
 # 6. PONTO DE ENTRADA DA EXECUÇÃO DO SCRIPT
 
@@ -84,7 +86,7 @@ SHEET_NAME_STOCKS = "Streamlit" # Aba para ações da B3
 SHEET_NAME_CRYPTO = "Criptos" # Aba para criptomoedas
 SHEET_NAME_ETFS = "ETF" # Aba para ETFs
 SHEET_NAME_FIIS = "FII" # Nova aba para FIIs
-SHEET_NAME_BDRS = "BDR" # Nova aba para BDRs (conforme solicitado, nome da aba no Excel)
+
 
 HIDDEN_FILES = ["hidden_cols.txt", "hidden_col.txt"]
 DEFAULT_TICKERS_FILE = "default_tickers.txt" # Novo arquivo para tickers padrão
@@ -240,39 +242,6 @@ def prever_alvo(row, last_cols, last_dates, next_friday):
 
     m, b = np.polyfit(valid_xs, valid_ys, 1)
     return round(m * next_friday.toordinal() + b, 2)
-
-# 4. FUNÇÕES DE VISUALIZAÇÃO E ESTILIZAÇÃO
-# 4.1. Estilização de DataFrames
-# 4.1.1. highlight_colunas_comparadas
-def highlight_colunas_comparadas(row, colunas_para_estilo):
-    """
-    Aplica estilo de cor (verde/vermelho) às colunas de cotação
-    com base na comparação com o valor anterior.
-    VERDE: se for maior OU IGUAL ao anterior.
-    VERMELHO: se for menor ao anterior.
-    """
-    vals = row[colunas_para_estilo].values
-    styles = [''] * len(vals)
-    for i in range(1, len(vals)):
-        ant = vals[i-1]
-        atual = vals[i]
-
-        if pd.notnull(ant) and pd.notnull(atual):
-            if atual >= ant: # ALTERADO: Condição para verde agora é maior OU IGUAL
-                styles[i] = 'color: green; font-weight: bold'
-            elif atual < ant:
-                styles[i] = 'color: red; font-weight: bold'
-            # Else (atual == ant, mas já coberto pelo >=), style permanece '' se não for menor.
-    return styles
-
-# 4.1.2. highlight_insights
-def highlight_insights(val):
-    if isinstance(val, str):
-        if "Compra Forte" in val or "Atenção para Compra" in val:
-            return 'color: green; font-weight: bold'
-        elif "Evitar / Atenção" in val:
-            return 'color: red; font-weight: bold'
-    return ''
 
 # 3.2.2. calculate_consecutive_growth
 def calculate_consecutive_growth(row, static_date_cols, current_quote_col):
@@ -723,7 +692,7 @@ def calculate_additional_indicators(hist_data: pd.DataFrame) -> pd.Series:
         'Aceleracao_10_Dias': aceleracao_10 # ADIÇÃO: Retorna a aceleração
     })
 
-# 3.6. Geração de Score e Insights
+# 3.6. Geração de Score e Indicadores
 # 3.6.1. calculate_attractiveness_score
 def calculate_attractiveness_score(row: pd.Series, weights: dict) -> float:
     """
@@ -785,7 +754,7 @@ def calculate_attractiveness_score(row: pd.Series, weights: dict) -> float:
     spread_pct = row.get('Spread (%)')
     var_daily = row.get('Var')
     if pd.notnull(spread_pct) and spread_pct > 1.0 and \
-        pd.notnull(var_daily) and var_daily < 0:
+       pd.notnull(var_daily) and var_daily < 0:
         score += 1.0 * weights.get('spread_bonus', 1.0) # Adiciona 1.0 ponto de bônus
 
     # NOVO CRITÉRIO: Proximidade ao Alvo (se o alvo for de alta)
@@ -832,21 +801,43 @@ def calculate_attractiveness_score(row: pd.Series, weights: dict) -> float:
 def generate_insight(row: pd.Series) -> str:
     """
     Gera uma única string de insight principal com base na classificação de atratividade.
-    As informações de Score, Nível e Aceleração são omitidas, pois já têm colunas próprias.
     """
     score = row.get("Score")
     if pd.notnull(score):
         if score >= 8.0:
-            return "Compra Forte"
-        elif score >= 6.0:
-            return "Atenção para Compra"
-        elif score >= 4.0:
+            return "Bons"
+        # Faixa para "Monitorar" 
+        elif score >= 7.0:
             return "Monitorar"
+        # Faixa para "Neutro" 
+        elif score >= 5.0:
+            return "Neutro"
         else:
-            return "Evitar / Atenção"
-    
+            return "Ruins"
+        
     # Se o score for nulo, indica que não há dados suficientes para calcular
     return "Sem dados para análise"
+
+# 3.6.3. analisar_spread
+def analisar_spread(row):
+    """
+    Analisa as colunas 'Var' e 'Spread (%)' para gerar uma classificação.
+    """
+    var = row.get("Var")
+    spread = row.get("Spread (%)")
+
+    if pd.notnull(var) and pd.notnull(spread):
+        if var > 0:
+            if spread > 1:
+                return "Monitorar"
+            elif spread < 1:
+                return "Neutro"
+        elif var < 0:
+            if spread > 1:
+                return "Atenção/ Compra"
+            elif spread < 1:
+                return "Evitar/ Venda"
+    return None # Retorna None se as condições não forem atendidas ou houver dados nulos
 
 
 # 3.4.2. get_max_price_last_12_months
@@ -1017,6 +1008,70 @@ def get_last_ex_dividend_date(ticker_yf: str) -> date | None:
         return None
 
 
+# 4. FUNÇÕES DE VISUALIZAÇÃO E ESTILIZAÇÃO
+# 4.1. Estilização de DataFrames
+# 4.1.1. highlight_colunas_comparadas
+def highlight_colunas_comparadas(row, colunas_para_estilo):
+    """
+    Aplica estilo de cor (verde/vermelho) às colunas de cotação
+    com base na comparação com o valor anterior.
+    VERDE: se for maior OU IGUAL ao anterior.
+    VERMELHO: se for menor ao anterior.
+    """
+    vals = row[colunas_para_estilo].values
+    styles = [''] * len(vals)
+    for i in range(1, len(vals)):
+        ant = vals[i-1]
+        atual = vals[i]
+
+        if pd.notnull(ant) and pd.notnull(atual):
+            if atual >= ant: # ALTERADO: Condição para verde agora é maior OU IGUAL
+                styles[i] = 'color: green; font-weight: bold'
+            elif atual < ant:
+                styles[i] = 'color: red; font-weight: bold'
+            # Else (atual == ant, mas já coberto pelo >=), style permanece '' se não for menor.
+    return styles
+
+# 4.1.2. highlight_insights
+def highlight_insights(val):
+    """Aplica cor à coluna 'Indicadores' com base no seu conteúdo."""
+
+    if isinstance(val, str):
+        # Condição para verde: "Bons"
+        if "Bons" in val:
+            return 'color: green; font-weight: bold'
+
+        # NOVA CONDIÇÃO para azul: "Monitorar"
+        elif "Monitorar" in val:
+            return 'color: blue; font-weight: bold'
+
+       # NOVA CONDIÇÃO para preto: "Neutro"
+        elif "Neutro" in val:
+            return 'color: black; font-weight: bold'
+
+        # Condição para vermelho: "Ruins"
+        elif "Ruins" in val:
+            return 'color: red; font-weight: bold'
+        
+    # Retorna uma string vazia se não houver correspondência (para "Esperar", etc.)
+    return ''
+
+# 4.1.3. highlight_analise_spread
+def highlight_analise_spread(val):
+    """Aplica cor à coluna 'Análise spread' com base no seu conteúdo."""
+    color = '' # Cor padrão
+    if isinstance(val, str):
+        if val == "Atenção/ Compra":
+            color = 'green'
+        elif val == "Evitar/ Venda":
+            color = 'red'
+        elif val == "Monitorar":
+            color = 'blue'
+        elif val == "Neutro":
+            color = 'black'
+    # Aplica o estilo apenas se uma cor foi definida
+    return f'color: {color}; font-weight: bold' if color else ''
+
 # 4.2. Gráficos Interativos
 # 4.2.1. visualize_price_data
 def visualize_price_data(hist_data: pd.DataFrame, ticker: str, sr_levels: dict, events_df: pd.DataFrame = None):
@@ -1050,16 +1105,16 @@ def visualize_price_data(hist_data: pd.DataFrame, ticker: str, sr_levels: dict, 
 
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                            vertical_spacing=0.1,
-                            row_heights=[0.7, 0.3])
+                                      vertical_spacing=0.1,
+                                      row_heights=[0.7, 0.3])
 
     # Candlestick chart
     fig.add_trace(go.Candlestick(x=hist_data.index,
-                                    open=hist_data['Open'],
-                                    high=hist_data['High'],
-                                    low=hist_data['Low'],
-                                    close=hist_data['Close'],
-                                    name='Preço'), row=1, col=1)
+                                       open=hist_data['Open'],
+                                       high=hist_data['High'],
+                                       low=hist_data['Low'],
+                                       close=hist_data['Close'],
+                                       name='Preço'), row=1, col=1)
 
     # Moving Averages
     if 'SMA_20_Dias' in hist_data.columns and hist_data['SMA_20_Dias'].any():
@@ -1097,15 +1152,15 @@ def visualize_price_data(hist_data: pd.DataFrame, ticker: str, sr_levels: dict, 
                     text=[f"Dividendo: {dividend_events.loc[d, 'Dividends']:.2f}" for d in dividend_dates_in_hist],
                     hoverinfo='text+x+y'
                 ), row=1, col=1)
-    
+        
     # Volume chart
     if 'Volume' in hist_data.columns and hist_data['Volume'].any():
         fig.add_trace(go.Bar(x=hist_data.index, y=hist_data['Volume'], name='Volume', marker_color='lightblue'), row=2, col=1)
 
     fig.update_layout(title_text=f'Análise de Preços para {ticker}',
-                        xaxis_rangeslider_visible=False,
-                        height=600,
-                        hovermode='x unified')
+                      xaxis_rangeslider_visible=False,
+                      height=600,
+                      hovermode='x unified')
     fig.update_yaxes(title_text='Preço', row=1, col=1)
     fig.update_yaxes(title_text='Volume', row=2, col=1)
 
@@ -1143,8 +1198,8 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
 
     # Lógica de formatação do Ticker para yFinance
     df["Ticker_YF"] = df["Ticker"].astype(str).str.strip()
-    # Adiciona .SA apenas para ações, ETFs, FIIs e BDRs
-    if asset_type_display_name in ["Ações", "ETFs", "FIIs", "BDRs"]:
+    # Adiciona .SA apenas para ações, ETFs, FIIs
+    if asset_type_display_name in ["Ações", "ETFs", "FIIs"]:
         df["Ticker_YF"] = df["Ticker_YF"] + ".SA"
     # Para criptos com -USD, o ticker já está no formato correto e não há conversão para BRL.
 
@@ -1172,6 +1227,10 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     # CORREÇÃO APLICADA AQUI: Passa os valores das colunas K, não os nomes das colunas
     df[["Var (abaixo)","Var (acima)"]] = df.apply(lambda row: encontrar_var_faixa(row, [row[c] for c in k_cols]), axis=1)
     df["Spread (%)"] = df.apply(lambda r: round(r.get("Var (acima)")-r.get("Var (abaixo)"), 2) if pd.notnull(r.get("Var (abaixo)")) and pd.notnull(r.get("Var (acima)")) else None, axis=1)
+
+    # <<<<<<< ADIÇÃO DA NOVA COLUNA >>>>>>>
+    df["Análise spread"] = df.apply(analisar_spread, axis=1)
+    # <<<<<<< FIM DA ADIÇÃO >>>>>>>
 
     date_cols = [c for c in df.columns if c[:4].isdigit() and "-" in c]
     for c in date_cols: df[c] = pd.to_numeric(df[c],errors="coerce")
@@ -1385,8 +1444,8 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     df['Score'] = df.apply(lambda row: calculate_attractiveness_score(row, weights), axis=1) # Renomeado para 'Score'
     indicator_cols.append('Score') # Adiciona ao controle de colunas
     
-    # --- NOVO: Criar a coluna "Insight" ---
-    df['Insight'] = df.apply(generate_insight, axis=1)
+    # --- NOVO: Criar a coluna "Indicadores" ---
+    df['Indicadores'] = df.apply(generate_insight, axis=1)
 
     # --- NOVO: Calcula o Dividend Yield (DY) ---
     df['DY (%)'] = df.apply(
@@ -1395,15 +1454,15 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     )
 
     # --- NOVO: Calcula a próxima data ex-dividendo ---
-    # Aplica get_next_ex_dividend_date apenas para Ações, FIIs e BDRs
-    if asset_type_display_name in ["Ações", "FIIs", "BDRs"]:
+    # Aplica get_next_ex_dividend_date apenas para Ações, FIIs
+    if asset_type_display_name in ["Ações", "FIIs"]:
         st.info(f"Buscando próxima data ex-dividendo para {asset_type_display_name}...")
         df['Data_ex'] = df['Ticker_YF'].apply(get_next_ex_dividend_date)
     else:
         df['Data_ex'] = None # Define como None para outros tipos de ativos
 
     # --- NOVO: Calcula a última data ex-dividendo (implementação aqui) ---
-    if asset_type_display_name in ["Ações", "FIIs", "BDRs"]:
+    if asset_type_display_name in ["Ações", "FIIs"]:
         st.info(f"Buscando última data ex-dividendo para {asset_type_display_name}...")
         df['Ultima_Data_ex'] = df['Ticker_YF'].apply(get_last_ex_dividend_date)
     else:
@@ -1425,7 +1484,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     all_cols = list(display_df.columns)
 
     # Definir a ordem desejada para as colunas
-    desired_order_base = ["Ticker", "Insight", "Score", "Spread (%)", "Var", "Nível"]
+    desired_order_base = ["Ticker", "Var", "Análise spread", "Indicadores", "Score", "Spread (%)", "Nível"]
     
     # Obter as colunas de data e ordená-las
     date_cols_in_df = sorted([c for c in all_cols if c[:4].isdigit() and "-" in c])
@@ -1441,7 +1500,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
 
     final_ordered_cols = []
 
-    # 1. Adicionar colunas iniciais (Ticker, Insight, Score, etc.)
+    # 1. Adicionar colunas iniciais (Ticker, Indicadores, Score, etc.)
     for col in desired_order_base:
         if col in all_cols:
             final_ordered_cols.append(col)
@@ -1466,7 +1525,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
                     final_ordered_cols.append("Cotação atual")
             else:
                 final_ordered_cols.append("Cotação atual")
-    
+        
     # 4. Adicionar as demais colunas na ordem desejada
     for col in explicit_placement_cols:
         if col in all_cols and col not in final_ordered_cols:
@@ -1559,9 +1618,9 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     if 'Ultima_Data_ex' in fmt: # Adicionada formatação para a nova coluna
         fmt['Ultima_Data_ex'] = lambda val: val.strftime('%Y-%m-%d') if pd.notnull(val) else ''
     
-    # NOVA FORMATAÇÃO: Para a nova coluna 'Insight'
-    if 'Insight' in fmt:
-        fmt['Insight'] = lambda val: str(val)
+    # NOVA FORMATAÇÃO: Para a nova coluna 'Indicadores'
+    if 'Indicadores' in fmt:
+        fmt['Indicadores'] = lambda val: str(val)
 
     # Reordena o DataFrame com a nova lista de colunas
     # Nota: a variável `final_ordered_cols` foi gerada na etapa de análise acima.
@@ -1569,13 +1628,13 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     
     # Definir a ordem desejada para as colunas
     all_cols = list(display_df.columns)
-    desired_order_base = ["Ticker", "Insight", "Score", "Spread (%)", "Var", "Nível"]
+    desired_order_base = ["Ticker", "Var", "Análise spread", "Indicadores", "Score", "Spread (%)", "Nível"]
     date_cols_in_df = sorted([c for c in all_cols if c[:4].isdigit() and "-" in c])
 
     explicit_placement_cols = [
         "Alvo", "Alvo_Ciclo", "Dias_Alvo", "DY (%)", "Ultima_Data_ex", "Data_ex",
         'Volatilidade_Anualizada', 'SMA_20_Dias', 'EMA_20_Dias',
-        'BB_Upper', 'BB_Lower', 'RSI_14_Dias', 'Volume_Medio_20_Dias',
+        'BB_Upper', 'BB_Lower', 'RSI_14_Dias', "Score", "Nível", 'Volume_Medio_20_Dias',
         'Momentum_10_Dias', 'Aceleracao_10_Dias',
         'Ciclo_FFT_Dias', 'Ciclo_ACF_Dias', 'Ciclo_Sinoidal_Dias', 'Ciclo_Dominante_Dias', 'Status_Ciclo'
     ]
@@ -1615,15 +1674,21 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     if not display_df.empty and colunas_para_estilo:
         styled = display_df.style.format(fmt)
         styled = styled.apply(lambda row: highlight_colunas_comparadas(row, colunas_para_estilo), axis=1, subset=colunas_para_estilo)
-        # Aplica a nova função de estilo para a coluna Insight
-        if 'Insight' in display_df.columns:
-            styled = styled.applymap(highlight_insights, subset=['Insight'])
+        
+        # Aplica a função de estilo para a coluna 'Indicadores'
+        if 'Indicadores' in display_df.columns:
+            styled = styled.applymap(highlight_insights, subset=['Indicadores'])
+
+        # Aplica a função de estilo para a coluna 'Análise spread'
+        if 'Análise spread' in display_df.columns:
+            styled = styled.applymap(highlight_analise_spread, subset=['Análise spread'])
+            
         st.dataframe(styled, use_container_width=True)
     else:
         st.dataframe(display_df.style.format(fmt), use_container_width=True)
 
     # --- REMOÇÃO DA SEÇÃO DE INSIGHTS E RECOMENDAÇÕES ---
-    # A lógica de insights agora está na coluna "Insight" da tabela principal.
+    # A lógica de insights agora está na coluna "Indicadores" da tabela principal.
 
     # Seção de Depuração de Dados de Sexta-feira
     st.subheader(f"🛠️ Histórico de Dados de Sexta-feira ({asset_type_display_name})")
@@ -1802,7 +1867,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
 
         # Coleta os dados de dividendos para passar para a função de plotagem
         events_data = None
-        if asset_type_display_name in ["Ações", "FIIs", "BDRs"]:
+        if asset_type_display_name in ["Ações", "FIIs"]:
             try:
                 yf_ticker_obj = yf.Ticker(selected_row_original["Ticker_YF"])
                 events_data = yf_ticker_obj.actions
@@ -2014,7 +2079,7 @@ def main():
         st.sidebar.write("---")
 
         # Cria as abas superiores para navegação
-        tab_stocks, tab_crypto, tab_etfs, tab_fiis, tab_bdrs, tab_indices = st.tabs(["Ações (B3)", "Criptomoedas", "ETFs", "FIIs", "BDRs", "Índices"])
+        tab_stocks, tab_crypto, tab_etfs, tab_fiis, tab_indices = st.tabs(["Ações (B3)", "Criptomoedas", "ETFs", "FIIs", "Índices"])
 
         # Bloco para Ações
         with tab_stocks:
@@ -2035,12 +2100,7 @@ def main():
         with tab_fiis:
             st.header(f"Análise de FIIs (Aba '{SHEET_NAME_FIIS}')")
             process_and_display_data(SHEET_NAME_FIIS, "FIIs", weights)
-
-        # Bloco para BDRs
-        with tab_bdrs:
-            st.header(f"Análise de BDRs (Aba '{SHEET_NAME_BDRS}')")
-            process_and_display_data(SHEET_NAME_BDRS, "BDRs", weights)
-
+        
         # Bloco para Índices
         with tab_indices:
             display_indices_tab()
