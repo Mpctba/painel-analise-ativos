@@ -31,7 +31,7 @@ Volume_Medio_20_Dias
 Aceleracao_10_Dias
 Ciclo_FFT_Dias
 Ciclo_ACF_Dias
-Ciclo_Sinoidal_Dias
+//Ciclo_Sinoidal_Dias
 Ciclo_Dominante_Dias
 Status_Ciclo
 

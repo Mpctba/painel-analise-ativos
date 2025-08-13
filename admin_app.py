@@ -86,6 +86,7 @@ SHEET_NAME_STOCKS = "Streamlit" # Aba para ações da B3
 SHEET_NAME_CRYPTO = "Criptos" # Aba para criptomoedas
 SHEET_NAME_ETFS = "ETF" # Aba para ETFs
 SHEET_NAME_FIIS = "FII" # Nova aba para FIIs
+SHEET_NAME_BDR = "BDR" # ADICIONADO: Aba para BDRs
 
 
 HIDDEN_FILES = ["hidden_cols.txt", "hidden_col.txt"]
@@ -108,7 +109,7 @@ def carregar_planilha(path: str, aba: str) -> pd.DataFrame:
 
 # 2.2. Aquisição de Dados Online (yfinance)
 # 2.2.1. get_price_var_min_max_last
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def get_price_var_min_max_last(ticker_yf: str):
     """
     Busca dados de cotação usando yfinance, calcula variação,
@@ -805,15 +806,15 @@ def generate_insight(row: pd.Series) -> str:
     score = row.get("Score")
     if pd.notnull(score):
         if score >= 8.0:
-            return "Bons"
-        # Faixa para "Monitorar" 
+            return "Ótimo"
+        # Faixa para "Monitorando/ Bom" 
         elif score >= 7.0:
-            return "Monitorar"
+            return "Monitorando/ Bom"
         # Faixa para "Neutro" 
         elif score >= 5.0:
             return "Neutro"
         else:
-            return "Ruins"
+            return "Esperar"
         
     # Se o score for nulo, indica que não há dados suficientes para calcular
     return "Sem dados para análise"
@@ -829,14 +830,14 @@ def analisar_spread(row):
     if pd.notnull(var) and pd.notnull(spread):
         if var > 0:
             if spread > 1:
-                return "Monitorar"
+                return "Monitorando/ Bom"
             elif spread < 1:
                 return "Neutro"
         elif var < 0:
             if spread > 1:
-                return "Atenção/ Compra"
+                return "Ótimo"
             elif spread < 1:
-                return "Evitar/ Venda"
+                return "Esperar"
     return None # Retorna None se as condições não forem atendidas ou houver dados nulos
 
 
@@ -1037,20 +1038,20 @@ def highlight_insights(val):
     """Aplica cor à coluna 'Indicadores' com base no seu conteúdo."""
 
     if isinstance(val, str):
-        # Condição para verde: "Bons"
-        if "Bons" in val:
+        # Condição para verde: "Ótimo"
+        if "Ótimo" in val:
             return 'color: green; font-weight: bold'
 
-        # NOVA CONDIÇÃO para azul: "Monitorar"
-        elif "Monitorar" in val:
+        # NOVA CONDIÇÃO para azul: "Monitorando/ Bom"
+        elif "Monitorando/ Bom" in val:
             return 'color: blue; font-weight: bold'
 
        # NOVA CONDIÇÃO para preto: "Neutro"
         elif "Neutro" in val:
             return 'color: black; font-weight: bold'
 
-        # Condição para vermelho: "Ruins"
-        elif "Ruins" in val:
+        # Condição para vermelho: "Esperar"
+        elif "Esperar" in val:
             return 'color: red; font-weight: bold'
         
     # Retorna uma string vazia se não houver correspondência (para "Esperar", etc.)
@@ -1061,11 +1062,11 @@ def highlight_analise_spread(val):
     """Aplica cor à coluna 'Análise spread' com base no seu conteúdo."""
     color = '' # Cor padrão
     if isinstance(val, str):
-        if val == "Atenção/ Compra":
+        if val == "Ótimo":
             color = 'green'
-        elif val == "Evitar/ Venda":
+        elif val == "Esperar":
             color = 'red'
-        elif val == "Monitorar":
+        elif val == "Monitorando/ Bom":
             color = 'blue'
         elif val == "Neutro":
             color = 'black'
@@ -1105,16 +1106,16 @@ def visualize_price_data(hist_data: pd.DataFrame, ticker: str, sr_levels: dict, 
 
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                                      vertical_spacing=0.1,
-                                      row_heights=[0.7, 0.3])
+                                          vertical_spacing=0.1,
+                                          row_heights=[0.7, 0.3])
 
     # Candlestick chart
     fig.add_trace(go.Candlestick(x=hist_data.index,
-                                       open=hist_data['Open'],
-                                       high=hist_data['High'],
-                                       low=hist_data['Low'],
-                                       close=hist_data['Close'],
-                                       name='Preço'), row=1, col=1)
+                                  open=hist_data['Open'],
+                                  high=hist_data['High'],
+                                  low=hist_data['Low'],
+                                  close=hist_data['Close'],
+                                  name='Preço'), row=1, col=1)
 
     # Moving Averages
     if 'SMA_20_Dias' in hist_data.columns and hist_data['SMA_20_Dias'].any():
@@ -1198,8 +1199,8 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
 
     # Lógica de formatação do Ticker para yFinance
     df["Ticker_YF"] = df["Ticker"].astype(str).str.strip()
-    # Adiciona .SA apenas para ações, ETFs, FIIs
-    if asset_type_display_name in ["Ações", "ETFs", "FIIs"]:
+    # Adiciona .SA apenas para ações, ETFs, FIIs e BDRs
+    if asset_type_display_name in ["Ações", "ETFs", "FIIs", "BDRs"]: # MODIFICADO
         df["Ticker_YF"] = df["Ticker_YF"] + ".SA"
     # Para criptos com -USD, o ticker já está no formato correto e não há conversão para BRL.
 
@@ -1454,15 +1455,15 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
     )
 
     # --- NOVO: Calcula a próxima data ex-dividendo ---
-    # Aplica get_next_ex_dividend_date apenas para Ações, FIIs
-    if asset_type_display_name in ["Ações", "FIIs"]:
+    # Aplica get_next_ex_dividend_date apenas para Ações, FIIs e BDRs
+    if asset_type_display_name in ["Ações", "FIIs", "BDRs"]: # MODIFICADO
         st.info(f"Buscando próxima data ex-dividendo para {asset_type_display_name}...")
         df['Data_ex'] = df['Ticker_YF'].apply(get_next_ex_dividend_date)
     else:
         df['Data_ex'] = None # Define como None para outros tipos de ativos
 
     # --- NOVO: Calcula a última data ex-dividendo (implementação aqui) ---
-    if asset_type_display_name in ["Ações", "FIIs"]:
+    if asset_type_display_name in ["Ações", "FIIs", "BDRs"]: # MODIFICADO
         st.info(f"Buscando última data ex-dividendo para {asset_type_display_name}...")
         df['Ultima_Data_ex'] = df['Ticker_YF'].apply(get_last_ex_dividend_date)
     else:
@@ -1867,7 +1868,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str, weig
 
         # Coleta os dados de dividendos para passar para a função de plotagem
         events_data = None
-        if asset_type_display_name in ["Ações", "FIIs"]:
+        if asset_type_display_name in ["Ações", "FIIs", "BDRs"]: # MODIFICADO
             try:
                 yf_ticker_obj = yf.Ticker(selected_row_original["Ticker_YF"])
                 events_data = yf_ticker_obj.actions
@@ -2079,7 +2080,8 @@ def main():
         st.sidebar.write("---")
 
         # Cria as abas superiores para navegação
-        tab_stocks, tab_crypto, tab_etfs, tab_fiis, tab_indices = st.tabs(["Ações (B3)", "Criptomoedas", "ETFs", "FIIs", "Índices"])
+        # MODIFICADO: Adicionada a aba 'BDRs'
+        tab_stocks, tab_crypto, tab_etfs, tab_fiis, tab_bdrs, tab_indices = st.tabs(["Ações (B3)", "Criptomoedas", "ETFs", "FIIs", "BDRs", "Índices"])
 
         # Bloco para Ações
         with tab_stocks:
@@ -2101,6 +2103,11 @@ def main():
             st.header(f"Análise de FIIs (Aba '{SHEET_NAME_FIIS}')")
             process_and_display_data(SHEET_NAME_FIIS, "FIIs", weights)
         
+        # ADICIONADO: Bloco para BDRs
+        with tab_bdrs:
+            st.header(f"Análise de BDRs (Aba '{SHEET_NAME_BDR}')")
+            process_and_display_data(SHEET_NAME_BDR, "BDRs", weights)
+
         # Bloco para Índices
         with tab_indices:
             display_indices_tab()
