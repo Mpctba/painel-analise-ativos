@@ -1,7 +1,5 @@
 // Ticker
 Spread (%)
-Análise spread
-Indicadores
 //Var
 2025-06-14 00:00:00
 2025-06-21 00:00:00
@@ -15,30 +13,9 @@ Indicadores
 //Cotação atual
 Spread Mínimo
 Spread Máximo
-//Posição Spread
-Insight
-Score
-Momentum_10_Dias
-//RSI_14_Dias
-Nível
+Posição Spread
+Análise spread
 //Alvo
-Alvo_Ciclo
-Dias_Alvo
-DY (%)
-Ultima_Data_ex
-Data_ex
-Volatilidade_Anualizada
-SMA_20_Dias
-EMA_20_Dias
-BB_Upper
-BB_Lower
-Volume_Medio_20_Dias
-Aceleracao_10_Dias
-Ciclo_FFT_Dias
-Ciclo_ACF_Dias
-//Ciclo_Sinoidal_Dias
-Ciclo_Dominante_Dias
-Status_Ciclo
 
 # --- Colunas de Cálculo (geralmente ocultas) ---
 Ticker_YF
@@ -73,4 +50,4 @@ K (2)
 Var (abaixo)
 Var (acima)
 //Cotação Abaixo
-Cotação Acima
+//Cotação Acima
