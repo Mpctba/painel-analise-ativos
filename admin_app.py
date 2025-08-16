@@ -176,15 +176,15 @@ def calcular_tracao(row):
     if var < 0:
         if posicao_spread > 90: return "Muito forte"
         elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Subindo"
-        elif posicao_spread > 20: return "Descendo"
+        elif posicao_spread > 50: return "Aumentando"
+        elif posicao_spread > 20: return "Diminuindo"
         elif posicao_spread > 10: return "Fraca"
         else: return "Muito fraca"
     elif var > 0:
         if posicao_spread > 90: return "Muito forte"
         elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Subindo"
-        elif posicao_spread > 20: return "Descendo"
+        elif posicao_spread > 50: return "Aumentando"
+        elif posicao_spread > 20: return "Diminuindo"
         elif posicao_spread > 10: return "Fraca"
         else: return "Muito fraca"
     return "Neutra"
@@ -220,7 +220,7 @@ def highlight_analise_spread(val):
 
 def highlight_tracao(val):
     if pd.isna(val): return ''
-    color_map = {"Muito forte": "green","Forte": "green", "Subindo": "blue", "Descendo": "black", "Fraca": "red", "Muito fraca": "red"}
+    color_map = {"Muito forte": "green","Forte": "green", "Aumentando": "blue", "Diminuindo": "black", "Fraca": "red", "Muito fraca": "red"}
     return f'color: {color_map.get(val, "black")}; font-weight: bold;'
 
 # 5. LÓGICA PRINCIPAL DA APLICAÇÃO STREAMLIT
