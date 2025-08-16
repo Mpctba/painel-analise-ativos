@@ -1,17 +1,22 @@
 // Ticker
-//Spread (%)
-// Var
+Spread (%)
+Análise spread
+Indicadores
+//Var
 2025-06-14 00:00:00
 2025-06-21 00:00:00
 2025-06-28 00:00:00
-2025-07-05 00:00:00
-2025-07-12 00:00:00
-2025-07-19 00:00:00
-2025-07-26 00:00:00
-2025-08-02 00:00:00
-2025-08-09 00:00:00
-// Cotação atual
-//Insight
+//2025-07-05 00:00:00
+//2025-07-12 00:00:00
+//2025-07-19 00:00:00
+//2025-07-26 00:00:00
+//2025-08-02 00:00:00
+//2025-08-09 00:00:00
+//Cotação atual
+Spread Mínimo
+Spread Máximo
+//Posição Spread
+Insight
 Score
 Momentum_10_Dias
 //RSI_14_Dias
@@ -67,3 +72,5 @@ K (3)
 K (2)
 Var (abaixo)
 Var (acima)
+//Cotação Abaixo
+Cotação Acima
