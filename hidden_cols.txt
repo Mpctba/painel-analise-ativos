@@ -1,0 +1,53 @@
+// Ticker
+Spread (%)
+//Var
+2025-06-14 00:00:00
+2025-06-21 00:00:00
+2025-06-28 00:00:00
+//2025-07-05 00:00:00
+//2025-07-12 00:00:00
+//2025-07-19 00:00:00
+//2025-07-26 00:00:00
+//2025-08-02 00:00:00
+//2025-08-09 00:00:00
+//Cotação atual
+Spread Mínimo
+Spread Máximo
+Posição Spread
+Análise spread
+//Alvo
+
+# --- Colunas de Cálculo (geralmente ocultas) ---
+Ticker_YF
+Mínima sexta desde jun/24
+Máxima sexta desde jun/24
+Fechamento mais recente
+S3
+S2
+S1
+P
+R1
+R2
+R3
+Nível abaixo
+Nível acima
+Delta
+Amplitude
+K (-2)
+K (-3)
+K (-5)
+K (-9)
+K (-17)
+K (-33)
+K (-65)
+K (65)
+K (33)
+K (17)
+K (9)
+K (5)
+K (3)
+K (2)
+Var (abaixo)
+Var (acima)
+//Cotação Abaixo
+//Cotação Acima
