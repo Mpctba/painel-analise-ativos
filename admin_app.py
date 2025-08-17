@@ -30,6 +30,10 @@ DEFAULT_TICKERS_FILE = "default_tickers.txt"
 
 SPREAD_ANALYSIS_DAYS = 360
 
+# NOME DO ARQUIVO DE ESTADO PARA O MONITORAMENTO DE TRAÇÃO
+STATUS_FILE = "tracao_status.csv"
+
+
 # 2. FUNÇÕES DE AQUISIÇÃO E CARREGAMENTO DE DADOS
 @st.cache_data(ttl=300)
 def carregar_planilha(path: str, aba: str) -> pd.DataFrame:
@@ -78,6 +82,28 @@ def get_index_data(ticker_yf: str):
     except Exception as e:
         print(f"Erro ao buscar dados para o índice {ticker_yf}: {e}")
         return None, None
+
+def carregar_status_anterior(file_path: str) -> pd.DataFrame:
+    """Carrega o status de tração da última execução a partir de um arquivo CSV."""
+    if not os.path.exists(file_path):
+        return pd.DataFrame(columns=["Ticker", "Tracao_Anterior"])
+    try:
+        df_anterior = pd.read_csv(file_path)
+        df_anterior = df_anterior.rename(columns={"Tração": "Tracao_Anterior"})
+        return df_anterior
+    except Exception as e:
+        st.warning(f"Não foi possível ler o arquivo de status anterior: {e}")
+        return pd.DataFrame(columns=["Ticker", "Tracao_Anterior"])
+
+def salvar_status_atual(df: pd.DataFrame, file_path: str):
+    """Salva o Ticker e o status de Tração atual em um arquivo CSV para a próxima execução."""
+    if "Ticker" in df.columns and "Tração" in df.columns:
+        try:
+            df_to_save = df[["Ticker", "Tração"]].copy()
+            df_to_save.to_csv(file_path, index=False)
+        except Exception as e:
+            st.error(f"Erro ao salvar o arquivo de status: {e}")
+
 
 # 3. FUNÇÕES DE CÁLCULO E ANÁLISE DE INDICADORES
 def prever_alvo(row, last_cols, last_dates, next_friday):
@@ -167,7 +193,6 @@ def calcular_posicao_spread(row, min_col_name, max_col_name):
         return round(max(0, min(100, posicao)), 2)
     return None
 
-# <<<<<<< FUNÇÃO CORRIGIDA >>>>>>>
 def calcular_tracao(row):
     var = row.get("Var")
     posicao_spread = row.get("Posição Spread")
@@ -190,7 +215,6 @@ def calcular_tracao(row):
     return "Neutra"
 
 def calcular_cotacao_por_percentual(row, nome_coluna_percentual):
-    """Transforma um valor percentual em um valor de cotação com base no preço atual."""
     cotacao = row.get("Cotação atual")
     percentual = row.get(nome_coluna_percentual)
 
@@ -199,6 +223,7 @@ def calcular_cotacao_por_percentual(row, nome_coluna_percentual):
 
     preco_calculado = cotacao * (1 + (percentual / 100))
     return round(preco_calculado, 2)
+
 
 # 4. FUNÇÕES DE VISUALIZAÇÃO E ESTILIZAÇÃO
 def highlight_positive_negative(val):
@@ -223,6 +248,7 @@ def highlight_tracao(val):
     color_map = {"Muito forte": "green","Forte": "green", "Aumentando": "blue", "Diminuindo": "black", "Fraca": "red", "Muito fraca": "red"}
     return f'color: {color_map.get(val, "black")}; font-weight: bold;'
 
+
 # 5. LÓGICA PRINCIPAL DA APLICAÇÃO STREAMLIT
 def process_and_display_data(sheet_name: str, asset_type_display_name: str):
     df_base = carregar_planilha(EXCEL_PATH, sheet_name)
@@ -241,6 +267,9 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
     
     if df.empty:
         st.info("Nenhum ticker para exibir."); return
+
+    # Carrega o status da execução anterior
+    df_anterior = carregar_status_anterior(STATUS_FILE)
 
     with st.spinner(f"Buscando e processando dados para {len(df)} ticker(s)..."):
         df["Ticker_YF"] = df["Ticker"].astype(str).str.strip()
@@ -289,6 +318,28 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
 
         df['Tração'] = df.apply(calcular_tracao, axis=1)
 
+    # ### LÓGICA PARA MONITORAR MUDANÇAS NA TRAÇÃO ###
+    STATUS_ORDER = {
+        "Muito fraca": 0, "Fraca": 1, "Diminuindo": 2, 
+        "Neutra": 3, "Aumentando": 4, "Forte": 5, "Muito forte": 6
+    }
+    df = pd.merge(df, df_anterior, on="Ticker", how="left")
+    df['Tracao_Atual_Num'] = df['Tração'].map(STATUS_ORDER)
+    df['Tracao_Anterior_Num'] = df['Tracao_Anterior'].map(STATUS_ORDER)
+    upgrades = df[df['Tracao_Atual_Num'] > df['Tracao_Anterior_Num']].copy()
+
+    if not upgrades.empty:
+        with st.expander("🚀 **Alertas de Melhoria de Tração**", expanded=True):
+            for _, row in upgrades.iterrows():
+                st.markdown(
+                    f"- **{row['Ticker']}**: Mudou de `{row['Tracao_Anterior']}` ➔ **`{row['Tração']}`**"
+                )
+    else:
+        st.info("Nenhuma melhoria de status na coluna 'Tração' desde a última atualização.")
+
+    salvar_status_atual(df, STATUS_FILE)
+    # ### FIM DA LÓGICA DE MONITORAMENTO ###
+
     hidden_cols_raw = []
     for fname in HIDDEN_FILES:
         if os.path.exists(fname):
@@ -299,7 +350,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
             except Exception as e:
                 st.warning(f"Erro ao ler o arquivo '{fname}': {e}")
     
-    cols_to_drop = ["Raw_Hist_Data", "Ticker_YF"]
+    cols_to_drop = ["Raw_Hist_Data", "Ticker_YF", "Tracao_Anterior", "Tracao_Atual_Num", "Tracao_Anterior_Num"]
     for hidden_name in hidden_cols_raw:
         for col in df.columns:
             if str(col).startswith(hidden_name):
@@ -308,23 +359,13 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
     cols_to_drop = list(set(cols_to_drop))
     display_df = df.drop(columns=cols_to_drop, errors="ignore")
 
-    # <<<<<<< AJUSTE NA ORDEM DAS COLUNAS (CORRIGIDO) >>>>>>>
     date_cols_in_df = sorted([c for c in display_df.columns if isinstance(c, str) and c[:4].isdigit() and "-" in c])
 
     ideal_order = [
-        'Ticker',
-        'Var',
-        'Cotação Abaixo',
-        'Cotação atual',
-        'Cotação Acima',
-        'Alvo',
-        'Tração',
+        'Ticker', 'Var', 'Cotação Abaixo', 'Cotação atual', 'Cotação Acima',
+        'Alvo', 'Tração',
     ] + date_cols_in_df + [
-        'Análise spread',
-        'Spread (%)',
-        col_max,
-        'Posição Spread',
-        col_min
+        'Análise spread', 'Spread (%)', col_max, 'Posição Spread', col_min
     ]
     
     ordered_cols = [col for col in ideal_order if col in display_df.columns]
@@ -353,7 +394,7 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
     
     valid_price_cols = [col for col in price_comparison_cols if col in display_df.columns]
     if valid_price_cols:
-         styled = styled.apply(highlight_colunas_comparadas, colunas_para_estilo=valid_price_cols, axis=1, subset=pd.IndexSlice[:, valid_price_cols])
+        styled = styled.apply(highlight_colunas_comparadas, colunas_para_estilo=valid_price_cols, axis=1, subset=pd.IndexSlice[:, valid_price_cols])
 
     st.dataframe(styled, use_container_width=True)
 
