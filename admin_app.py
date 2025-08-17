@@ -180,7 +180,7 @@ def calculate_spread_stats_for_period(hist_data: pd.DataFrame, days: int) -> tup
 def analisar_spread(row):
     var, spread = row.get("Var"), row.get("Spread (%)")
     if pd.notnull(var) and pd.notnull(spread):
-        if var > 0: return "Monitorando/ Bom" if spread > 1 else "Neutro"
+        if var > 0: return "Monitorando/ Bom" if spread > 1 else "Neutra"
         elif var < 0: return "Ótimo" if spread > 1 else "Esperar"
     return None
 
@@ -201,15 +201,15 @@ def calcular_tracao(row):
     if var < 0:
         if posicao_spread > 90: return "Muito forte"
         elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Aumentando"
-        elif posicao_spread > 20: return "Diminuindo"
+        elif posicao_spread > 50: return "Moderada"
+        elif posicao_spread > 20: return "Neutra"
         elif posicao_spread > 10: return "Fraca"
         else: return "Muito fraca"
     elif var > 0:
         if posicao_spread > 90: return "Muito forte"
         elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Aumentando"
-        elif posicao_spread > 20: return "Diminuindo"
+        elif posicao_spread > 50: return "Moderada"
+        elif posicao_spread > 20: return "Neutra"
         elif posicao_spread > 10: return "Fraca"
         else: return "Muito fraca"
     return "Neutra"
@@ -240,12 +240,12 @@ def highlight_colunas_comparadas(row, colunas_para_estilo):
     return styles
 
 def highlight_analise_spread(val):
-    color_map = {"Ótimo": "green", "Monitorando/ Bom": "blue", "Neutro": "black", "Esperar": "red"}
+    color_map = {"Ótimo": "green", "Monitorando/ Bom": "blue", "Neutra": "black", "Esperar": "red"}
     return f'color: {color_map.get(val, "")}; font-weight: bold' if color_map.get(val) else ''
 
 def highlight_tracao(val):
     if pd.isna(val): return ''
-    color_map = {"Muito forte": "green","Forte": "green", "Aumentando": "blue", "Diminuindo": "black", "Fraca": "red", "Muito fraca": "red"}
+    color_map = {"Muito forte": "green","Forte": "green", "Moderada": "blue", "Neutra": "black", "Fraca": "red", "Muito fraca": "red"}
     return f'color: {color_map.get(val, "black")}; font-weight: bold;'
 
 
@@ -320,8 +320,8 @@ def process_and_display_data(sheet_name: str, asset_type_display_name: str):
 
     # ### LÓGICA PARA MONITORAR MUDANÇAS NA TRAÇÃO ###
     STATUS_ORDER = {
-        "Muito fraca": 0, "Fraca": 1, "Diminuindo": 2, 
-        "Neutra": 3, "Aumentando": 4, "Forte": 5, "Muito forte": 6
+        "Muito fraca": 0, "Fraca": 1, "Neutra": 2, 
+        "Neutra": 3, "Moderada": 4, "Forte": 5, "Muito forte": 6
     }
     df = pd.merge(df, df_anterior, on="Ticker", how="left")
     df['Tracao_Atual_Num'] = df['Tração'].map(STATUS_ORDER)
