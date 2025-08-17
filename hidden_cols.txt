@@ -13,7 +13,8 @@ Spread (%)
 //Cotação atual
 Spread Mínimo
 Spread Máximo
-Posição Spread
+//Margem
+Status
 Análise spread
 //Alvo
 
