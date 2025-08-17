@@ -199,19 +199,19 @@ def calcular_tracao(row):
     if pd.isna(var) or pd.isna(posicao_spread): return None
 
     if var < 0:
-        if posicao_spread > 90: return "Muito forte"
-        elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Moderada"
-        elif posicao_spread > 20: return "Neutra"
-        elif posicao_spread > 10: return "Fraca"
-        else: return "Muito fraca"
+        if posicao_spread > 90: return "Muito Baixa/ Atrativa"
+        elif posicao_spread > 80: return "Baixa"
+        elif posicao_spread > 50: return "Reduzida"
+        elif posicao_spread > 20: return "Moderada"
+        elif posicao_spread > 10: return "Alta/ Atenção"
+        else: return "Muito alta/ Evitar"
     elif var > 0:
-        if posicao_spread > 90: return "Muito forte"
-        elif posicao_spread > 80: return "Forte"
-        elif posicao_spread > 50: return "Moderada"
-        elif posicao_spread > 20: return "Neutra"
-        elif posicao_spread > 10: return "Fraca"
-        else: return "Muito fraca"
+        if posicao_spread > 90: return "Muito baixa/ Atrativa"
+        elif posicao_spread > 80: return "Baixa"
+        elif posicao_spread > 50: return "Reduzida"
+        elif posicao_spread > 20: return "Moderada"
+        elif posicao_spread > 10: return "Alta/ Atenção"
+        else: return "Muito alta/ Evitar"
     return "Neutra"
 
 def calcular_cotacao_por_percentual(row, nome_coluna_percentual):
@@ -245,7 +245,7 @@ def highlight_analise_spread(val):
 
 def highlight_tracao(val):
     if pd.isna(val): return ''
-    color_map = {"Muito forte": "green","Forte": "green", "Moderada": "blue", "Neutra": "black", "Fraca": "red", "Muito fraca": "red"}
+    color_map = {"Muito alta/ Evitar": "green","Alta/ Atenção": "green", "Moderada": "green", "Reduzida": "red", "Baixa": "red", "Muito Baixa/ Atrativa": "red"}
     return f'color: {color_map.get(val, "black")}; font-weight: bold;'
 
 
